@@ -1,0 +1,8 @@
+# docker-compose.yml
+services:
+  scraper:
+    build: .
+    volumes:
+      - ./output:/app/output
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
