@@ -5,7 +5,7 @@ from typing import List
 
 from loguru import logger
 from pandas._libs.lib import count_level_2d
-from playwright.async_api import async_playwright, Browser
+from playwright.async_api import Locator, Page, async_playwright, Browser
 from tqdm.asyncio import tqdm_asyncio
 
 from parser import Listing, extract_listings
@@ -20,6 +20,75 @@ CONCURRENCY = 1  # simultaneous browser tabs
 RATE_LIMIT = 1.0  # seconds between requests (same domain)
 
 
+async def login_to_website(page):
+    # Interact with login form
+    await page.get_by_placeholder("Enter email").fill("jhake@littleelephant.io")
+    await page.get_by_placeholder("Enter password").fill("A2ADWnC34BIuOu!")
+    await page.get_by_role("button", name="Sign in").click()
+    try:
+        await page.wait_for_load_state("networkidle", timeout=10_000)
+        await page.wait_for_timeout(10_000)
+    except TimeoutError:
+        print("Warning: Timeout while waiting after Sign In,")
+
+    await page.screenshot(path="output/after_login.png", full_page=True)
+
+
+async def goto_form(page):
+    await page.get_by_role("button", name="Add Inventory").click()
+
+    await page.screenshot(path="output/after_add_inventory_click.png", full_page=True)
+
+    await page.get_by_text("Create Items Manually").click()
+
+    await page.wait_for_timeout(3000)
+    modal = page.locator("#custom-modal").first
+
+    # Wait for modal to be visible and stable
+    await modal.wait_for(state="visible")
+    await page.wait_for_timeout(500)  # small delay for animation (optional)
+
+    # Now click the close button inside
+    await modal.get_by_role("button", name="Close").nth(1).click(force=True)
+    await page.wait_for_timeout(500)  # small delay for animation (optional)
+
+
+async def get_all_category_locatora(
+    category_dropdown_selector, page: Page
+) -> List[Locator]:
+    category_dropdown_locator = page.locator(category_dropdown_selector).first
+    await category_dropdown_locator.click(force=True)
+    await page.wait_for_timeout(500)  # small delay for animation (optional)
+    await page.screenshot(
+        path="output/after_category_dropbox_click.png", full_page=True
+    )
+
+    # get all categories
+    category_container = page.locator("div.css-jamj16")
+    category_locators = category_container.locator("div.css-z6s5c0 span")
+    categories = await category_locators.all()
+    # cleaned_categories = [category.strip() for category in categories]
+    logger.debug(f"Cleaned Categories: {len(categories)} ")
+    # print(cleaned_categories)
+    return categories
+
+
+async def expand_form(category_dd_label_locator, page):
+    # click View All button
+    view_all_btn_locator = (
+        page.locator(".css-10xw46m button").filter(has_text="View All").first
+    )
+    btn_count = await view_all_btn_locator.count()
+    logger.debug(f"View All button count: {btn_count}")
+    if btn_count > 0:
+        logger.debug("\tView All button found")
+        await category_dd_label_locator.click(force=True)
+        await page.wait_for_timeout(1000)
+        await view_all_btn_locator.click(force=True)
+        await view_all_btn_locator.evaluate("el => el.click()")
+        await page.wait_for_timeout(1000)
+
+
 # ------------------------------------------------------------------- #
 async def crawl_page(browser: Browser, url: str, limiter: RateLimiter) -> List[Listing]:
     async with limiter:
@@ -28,88 +97,25 @@ async def crawl_page(browser: Browser, url: str, limiter: RateLimiter) -> List[L
             await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
             await page.wait_for_load_state("networkidle")
 
-            # Interact with login form
-            await page.get_by_placeholder("Enter email").fill("jhake@littleelephant.io")
-            await page.get_by_placeholder("Enter password").fill("A2ADWnC34BIuOu!")
-            await page.get_by_role("button", name="Sign in").click()
-            try:
-                await page.wait_for_load_state("networkidle", timeout=10_000)
-                await page.wait_for_timeout(10_000)
-            except TimeoutError:
-                print("Warning: Timeout while waiting after Sign In,")
+            await login_to_website(page)
+            await goto_form(page)
 
-            await page.screenshot(path="output/after_login.png", full_page=True)
-
-            await page.get_by_role("button", name="Add Inventory").click()
-
-            await page.screenshot(
-                path="output/after_add_inventory_click.png", full_page=True
+            # get categories
+            category_dd_label_selector = "div.css-79elbk span"
+            category_dropdown_selector = "div.css-tf8u31 div.css-1dr1o9l button"
+            category_dd_label_locator = page.locator(category_dd_label_selector).first
+            categories = await get_all_category_locatora(
+                category_dropdown_selector, page
             )
 
-            await page.get_by_text("Create Items Manually").click()
-
-            await page.wait_for_timeout(3000)
-            modal = page.locator("#custom-modal").first
-
-            # Wait for modal to be visible and stable
-            await modal.wait_for(state="visible")
-            await page.wait_for_timeout(500)  # small delay for animation (optional)
-
-            # Now click the close button inside
-            await modal.get_by_role("button", name="Close").nth(1).click(force=True)
-            await page.wait_for_timeout(500)  # small delay for animation (optional)
-
-            # click category dropbox
-            category_dd_label_locator = page.locator("div.css-79elbk span").first
-            # await category_dd_label_locator.click(force=True)
-            category_dropdown_locator = page.locator(
-                "div.css-tf8u31 div.css-1dr1o9l button"
-            ).first
-            await category_dropdown_locator.click(force=True)
-            await page.wait_for_timeout(500)  # small delay for animation (optional)
-            await page.screenshot(
-                path="output/after_category_dropbox_click.png", full_page=True
-            )
-
-            # get all categories
-            category_container = page.locator("div.css-jamj16")
-            category_locators = category_container.locator("div.css-z6s5c0 span")
-            categories = await category_locators.all()
-            # cleaned_categories = [category.strip() for category in categories]
-            logger.debug(f"Cleaned Categories: {len(categories)} ")
-            # print(cleaned_categories)
-
-            # click View All button
-            view_all_btn_locator = (
-                page.locator(".css-10xw46m button").filter(has_text="View All").first
-            )
-            btn_count = await view_all_btn_locator.count()
-            logger.debug(f"View All button count: {btn_count}")
-            if btn_count > 0:
-                logger.debug("\tView All button found")
-                await category_dd_label_locator.click(force=True)
-                await page.wait_for_timeout(1000)
-                await view_all_btn_locator.click(force=True)
-                await view_all_btn_locator.evaluate("el => el.click()")
-                await page.wait_for_timeout(3000)
-                await (
-                    page.locator(".css-10xw46m button")
-                    .filter(has_text="Show Less")
-                    .scroll_into_view_if_needed()
-                )
-                # await view_all_btn_locator.click(force=True)
-                # await page.wait_for_timeout(1000)
+            await expand_form(category_dd_label_locator, page)
 
             count = 0
             for category in categories:
-                await page.locator(
-                    "div.css-tf8u31 div.css-1dr1o9l button"
-                ).first.evaluate("el => el.click()")
-                # await category_dropdown_locator2.hover(force=True) # await page.wait_for_timeout(1000)
-                # await category_dropdown_locator2.click(force=True)
-                # await category_dropdown_locator2.focus()
+                await page.locator(category_dropdown_selector).first.evaluate(
+                    "el => el.click()"
+                )
                 await page.wait_for_timeout(2000)
-                await page.locator(".MuiPopover-root").scroll_into_view_if_needed()
                 await page.wait_for_selector(".MuiPopover-root")
                 if not await category.is_visible():
                     raise Exception("Category is not visible")
