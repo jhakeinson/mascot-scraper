@@ -89,6 +89,48 @@ async def expand_form(category_dd_label_locator, page):
         await page.wait_for_timeout(1000)
 
 
+async def process_category_form(category_text, page):
+    # get item spec fields
+    item_spec_locator = (
+        # page.locator("div.css-rdzyjul")
+        page.locator("div")
+        .get_by_text("Item Specifics")
+        .locator("..")
+        .locator("..")
+        .locator("..")
+        .locator("..")
+        .first
+    )
+    if await item_spec_locator.count() == 0:
+        raise Exception(f"Cannot found item spec locator for {category_text}")
+    logger.info(f"Found item spec locator for {category_text}")
+    field_locators = (
+        await page.locator("div")
+        .get_by_text("Item Specifics")
+        .locator("..")
+        .locator("..")
+        .locator("..")
+        .locator("..")
+        .first.locator("div.css-1ddqjgm")
+        .all()
+    )
+    for field in field_locators:
+        label_locator = field.locator("span")
+        label_text = await label_locator.text_content()
+        field_input_locator = field.locator("input[type='text']")
+        await field_input_locator.focus()
+        await page.wait_for_timeout(1000)
+        input_options = page.locator("div.MuiPopover-root")
+
+        if await input_options.count() == 0:
+            logger.debug("\tNo options")
+            options = []
+        else:
+            options_locators = input_options.locator("span")
+            options = await options_locators.all_text_contents()
+        logger.debug(f'\tLabel: "{label_text}", Options Count: {len(options)}')
+
+
 # ------------------------------------------------------------------- #
 async def crawl_page(browser: Browser, url: str, limiter: RateLimiter) -> List[Listing]:
     async with limiter:
@@ -125,53 +167,8 @@ async def crawl_page(browser: Browser, url: str, limiter: RateLimiter) -> List[L
                 await page.wait_for_timeout(1000)
                 await category_dd_label_locator.click(force=True)
                 await page.wait_for_timeout(1000)
-                # await page.screenshot(
-                #     path=f"output/after_category_click_{category}.png", full_page=True
-                # )
 
-                # get item spec fields
-                item_spec_locator = (
-                    # page.locator("div.css-rdzyjul")
-                    page.locator("div")
-                    .get_by_text("Item Specifics")
-                    .locator("..")
-                    .locator("..")
-                    .locator("..")
-                    .locator("..")
-                    .first
-                )
-                if await item_spec_locator.count() == 0:
-                    raise Exception(
-                        f"Cannot found item spec locator for {category_text}"
-                    )
-                logger.info(f"Found item spec locator for {category_text}")
-                field_locators = (
-                    await page.locator("div")
-                    .get_by_text("Item Specifics")
-                    .locator("..")
-                    .locator("..")
-                    .locator("..")
-                    .locator("..")
-                    .first.locator("div.css-1ddqjgm")
-                    .all()
-                )
-                for field in field_locators:
-                    label_locator = field.locator("span")
-                    label_text = await label_locator.text_content()
-                    field_input_locator = field.locator("input[type='text']")
-                    await field_input_locator.focus()
-                    await page.wait_for_timeout(1000)
-                    input_options = page.locator("div.MuiPopover-root")
-
-                    if await input_options.count() == 0:
-                        logger.debug("\tNo options")
-                        options = []
-                    else:
-                        options_locators = input_options.locator("span")
-                        options = await options_locators.all_text_contents()
-                    logger.debug(
-                        f'\tLabel: "{label_text}", Options Count: {len(options)}'
-                    )
+                await process_category_form(category_text, page)
 
                 await category_dd_label_locator.click(force=True)
                 await page.wait_for_timeout(300)
