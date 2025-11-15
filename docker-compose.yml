@@ -2,7 +2,13 @@
 services:
   scraper:
     build: .
+    user: "${UID}:${GID}"
     volumes:
       - ./output:/app/output
     environment:
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - PWDEBUG=console  # Enables Playwright in DevTools console for resume()
+    # ports:
+    #   - "9222:9222"
+    # network_mode: "host"  # Fix binding—uses host network directly (no isolated bridge)
+    # shm_size: "2g"

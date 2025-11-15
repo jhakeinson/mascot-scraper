@@ -15,4 +15,4 @@ COPY scraper.py parser.py utils.py ./
 RUN uv sync --frozen --no-cache
 
 # Run scraper
-CMD ["uv", "run", "scraper.py"]
+CMD uv run scraper.py
