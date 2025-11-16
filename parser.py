@@ -14,10 +14,10 @@ class Field(BaseModel):
     field_values: str  # vertical bar `|` separated string
 
 
-async def login_to_website(page):
+async def login_to_website(username, password, page):
     # Interact with login form
-    await page.get_by_placeholder("Enter email").fill("jhake@littleelephant.io")
-    await page.get_by_placeholder("Enter password").fill("A2ADWnC34BIuOu!")
+    await page.get_by_placeholder("Enter email").fill(username)
+    await page.get_by_placeholder("Enter password").fill(password)
     await page.get_by_role("button", name="Sign in").click()
     try:
         await page.wait_for_load_state("networkidle", timeout=10_000)

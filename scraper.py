@@ -21,6 +21,10 @@ MAX_PAGES = 10
 CONCURRENCY = 1  # simultaneous browser tabs
 RATE_LIMIT = 1.0  # seconds between requests (same domain)
 
+# Login Credentials
+USERNAME = "jhake@littleelephant.io"
+PASSWORD = "A2ADWnC34BIuOu!"
+
 
 # ------------------------------------------------------------------- #
 async def crawl_page(
@@ -32,7 +36,7 @@ async def crawl_page(
             await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
             await page.wait_for_load_state("networkidle")
 
-            await login_to_website(page)
+            await login_to_website(USERNAME, PASSWORD, page)
             await goto_form(page)
             data = await extract_form_data(page)
 
