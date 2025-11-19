@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 
 from loguru import logger
+import pandas as pd
 from playwright.async_api import (
     BrowserContext,
     async_playwright,
@@ -49,21 +50,12 @@ async def async_main() -> None:
             config.USER_DATA_DIR,
             headless=config.HEADLESS,
             args=[
-                # "--remote-debugging-port=9222",
-                # "--remote-debugging-address=0.0.0.0",  # Bind for host access
                 "--no-sandbox",
-                #     "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--disable-software-rasterizer",
-                #     # "--disable-features=DevToolsDebuggingRestrictions",  # Workaround for Chrome 136+ CDP restrictions (2025 issue)
             ],
         )
-        # logger.info(
-        #     "Browser launched. Script paused for 5 minutes. Connect to http://localhost:9222/json/list to inspect."
-        # )
-        # await asyncio.sleep(300)  # 5 minutes pause
-        # await browser.new_context(viewport={"width": 1920, "height": 1080})
         semaphore = asyncio.Semaphore(config.CONCURRENCY)
 
         async def bounded_crawl(url):
@@ -76,12 +68,12 @@ async def async_main() -> None:
         await browser.close()
 
     # ---- export ----
-    Path("output").mkdir(exist_ok=True)
-    import pandas as pd
+    # ---- export ----
+    Path(config.OUTPUT_DIR).mkdir(exist_ok=True)
 
     df = pd.DataFrame([r.model_dump() for r in results])
-    df.to_csv("output/mascot_fiels.csv", index=False)
-    df.to_parquet("output/mascot_fields.parquet", index=False)
+    df.to_csv(f"{config.OUTPUT_DIR}/mascot_fields.csv", index=False)
+    df.to_parquet(f"{config.OUTPUT_DIR}/mascot_fields.parquet", index=False)
     logger.success(f"Saved {len(df)} records")
 
 

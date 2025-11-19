@@ -19,3 +19,6 @@ PASSWORD = os.getenv("PASSWORD")
 # Browser Configuration
 USER_DATA_DIR = os.getenv("USER_DATA_DIR", "/tmp/playwright-chrome-profile")
 HEADLESS = os.getenv("HEADLESS", "True").lower() in ("true", "1", "yes")
+
+# Output Configuration
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "output")
