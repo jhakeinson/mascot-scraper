@@ -8,11 +8,11 @@ RUN pip install --no-cache-dir uv
 WORKDIR /app
 
 # Copy project
-COPY pyproject.toml uv.lock* ./
-COPY scraper.py parser.py utils.py ./
+COPY pyproject.toml uv.lock* README.md ./
+COPY src ./src
 
 # Install deps with uv
 RUN uv sync --frozen --no-cache
 
 # Run scraper
-CMD uv run scraper.py
+CMD ["uv", "run", "mascot-scraper"]

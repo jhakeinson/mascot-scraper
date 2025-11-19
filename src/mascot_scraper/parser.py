@@ -1,17 +1,8 @@
-# parser.py
 from bs4 import BeautifulSoup
 from playwright.async_api import Locator, Page
-from pydantic import BaseModel
 from typing import List
 from loguru import logger
-
-
-class Field(BaseModel):
-    category_name: str
-    form_label: str
-    field_label: str
-    field_type: str
-    field_values: str  # vertical bar `|` separated string
+from .models import Field
 
 
 async def login_to_website(username, password, page):
