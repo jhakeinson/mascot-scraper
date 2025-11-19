@@ -1,8 +1,10 @@
 # scraper.py
 import asyncio
+import os
 from pathlib import Path
 from typing import List
 
+from dotenv import load_dotenv
 from loguru import logger
 from playwright.async_api import (
     BrowserContext,
@@ -13,17 +15,24 @@ from tqdm.asyncio import tqdm_asyncio
 from parser import Field, extract_form_data, goto_form, login_to_website
 from utils import RateLimiter
 
+# Load environment variables from .env file
+load_dotenv()
+
 # ------------------------------------------------------------------- #
-# Configurable constants
+# Configuration from environment variables
 # ------------------------------------------------------------------- #
-START_URL = "https://app.withmascot.com/login"
-MAX_PAGES = 10
-CONCURRENCY = 1  # simultaneous browser tabs
-RATE_LIMIT = 1.0  # seconds between requests (same domain)
+START_URL = os.getenv("START_URL", "https://app.withmascot.com/login")
+MAX_PAGES = int(os.getenv("MAX_PAGES", "10"))
+CONCURRENCY = int(os.getenv("CONCURRENCY", "1"))  # simultaneous browser tabs
+RATE_LIMIT = float(os.getenv("RATE_LIMIT", "1.0"))  # seconds between requests (same domain)
 
 # Login Credentials
-USERNAME = "jhake@littleelephant.io"
-PASSWORD = "A2ADWnC34BIuOu!"
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
+
+# Browser Configuration
+USER_DATA_DIR = os.getenv("USER_DATA_DIR", "/tmp/playwright-chrome-profile")
+HEADLESS = os.getenv("HEADLESS", "True").lower() in ("true", "1", "yes")
 
 
 # ------------------------------------------------------------------- #
@@ -53,13 +62,12 @@ async def main() -> None:
     limiter = RateLimiter(per_second=1 / RATE_LIMIT)
     results: List[Field] = []
     # Create temp dir if needed (safe in async)
-    user_data_dir = "/tmp/playwright-chrome-profile"
-    Path(user_data_dir).mkdir(parents=True, exist_ok=True)
+    Path(USER_DATA_DIR).mkdir(parents=True, exist_ok=True)
     async with async_playwright() as pw:
         # Let PWDEBUG control headless/headful
         browser = await pw.chromium.launch_persistent_context(
-            user_data_dir,
-            headless=True,
+            USER_DATA_DIR,
+            headless=HEADLESS,
             args=[
                 # "--remote-debugging-port=9222",
                 # "--remote-debugging-address=0.0.0.0",  # Bind for host access

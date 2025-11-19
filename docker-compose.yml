@@ -2,13 +2,21 @@
 services:
   scraper:
     build: .
-    user: "${UID}:${GID}"
+    user: "${USER_ID}:${GROUP_ID}"
+    env_file:
+      - .env # Load environment variables from .env file
     volumes:
-      - ./output:/app/output
+      - ./output:/app/output # Output directory for scraped data
+      - playwright-data:/tmp/playwright-chrome-profile # Browser profile data
     environment:
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-      - PWDEBUG=console  # Enables Playwright in DevTools console for resume()
+      - PWDEBUG=console # Enables Playwright in DevTools console for resume()
+      - USER_DATA_DIR=/tmp/playwright-chrome-profile # Override for Docker environment
     # ports:
     #   - "9222:9222"
     # network_mode: "host"  # Fix binding—uses host network directly (no isolated bridge)
-    # shm_size: "2g"
+    shm_size: "2g" # Increase shared memory for Chrome stability
+
+# Named volume for persistent browser data
+volumes:
+  playwright-data:
